@@ -6,7 +6,9 @@ from app.api.v1.endpoints import router as v1_router
 app = FastAPI(title="Document Management API")
 
 origins = [
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "https://snowjass.ru",
+    "https://www.snowjass.ru",
 ]
 
 app.add_middleware(
