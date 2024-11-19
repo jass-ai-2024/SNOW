@@ -6,6 +6,12 @@ import {
   VStack,
   useDisclosure,
   Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverHeader,
+  PopoverBody,
+  PopoverFooter,
+  PopoverArrow,
   IconButton,
   Button,
 } from '@chakra-ui/react';
@@ -17,6 +23,7 @@ import {useDocuments} from "../../hooks/useDocuments";
 import {FileContextMenu} from "./FileContextMenu";
 import {documentsApi} from "../../api/documents";
 import {useQueryClient} from "@tanstack/react-query";
+import {DeleteConfirmDialog} from "./DeleteConfirmDialog";
 
 interface FileTreeItemProps {
   document: Document;
@@ -27,10 +34,7 @@ interface FileTreeItemProps {
 
 const FileTreeItem: React.FC<FileTreeItemProps> = ({ document, onSelect, selectedId, index }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const { open, onOpen, onClose } = useDisclosure();
-  const cancelRef = React.useRef(null);
   const queryClient = useQueryClient();
-
   const [isOpen, setIsOpen] = React.useState(false);
   const { documents, isLoading, uploadDocument } = useDocuments(isOpen ? document.id : undefined);
   const isFolder = document.doc_metadata.type === 'folder';
@@ -50,10 +54,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({ document, onSelect, selecte
     try {
       await documentsApi.deleteDocument(document.id);
       await queryClient.invalidateQueries({ queryKey: ['documents'] });
-      onClose();
     } catch (error: any) {
-      console.error('Failed to delete:', error);
-      // Если папка не пуста
       if (error.response?.status === 400) {
         alert('Cannot delete folder with documents inside');
       }
@@ -106,24 +107,15 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({ document, onSelect, selecte
                   <Text>{document.content}</Text>
 
                   {isHovered && (
-                    <IconButton
-                      aria-label="Delete document"
-                      size="xs"
-                      variant="ghost"
-                      colorScheme="red"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpen();
-                      }}
-                      position="absolute"
-                      right={2}
-                      opacity={0.7}
-                      _hover={{ opacity: 1 }}
+                    <button
+                      className="absolute right-2 p-1 rounded hover:bg-gray-200 transition-colors"
+                      onClick={handleDelete}
                     >
-                      <Trash2 size={16} />
-                    </IconButton>
+                      <Trash2 size={16} className="text-red-500" style={{cursor: "pointer", opacity: 0.8}} />
+                    </button>
                   )}
-                </HStack>
+
+        </HStack>
 
                 {isFolder && isOpen && (
                   <Droppable droppableId={document.id.toString()}>

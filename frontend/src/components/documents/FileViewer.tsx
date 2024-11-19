@@ -43,7 +43,7 @@ export const FileViewer: React.FC<{ documentId?: number }> = ({ documentId }) =>
   }
 
   const downloadUri = `${API_URL}/documents/download/${document.id}`;
-  console.log(downloadUri)
+  console.log(downloadUri, document.content)
   const docs = [{
     uri: downloadUri,
     fileName: document.content,
@@ -56,18 +56,6 @@ export const FileViewer: React.FC<{ documentId?: number }> = ({ documentId }) =>
         documents={docs}
         pluginRenderers={DocViewerRenderers}
         style={{ height: '100%' }}
-        config={{
-          header: {
-            disableHeader: false,
-            disableFileName: false,
-            retainURLParams: false
-          }
-        }}
-        theme={{
-          primary: '#3182ce',
-          secondary: '#2C5282',
-          tertiary: '#2D3748',
-        }}
       />
     </Box>
   );

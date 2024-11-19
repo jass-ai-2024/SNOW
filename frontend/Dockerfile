@@ -1,23 +1,32 @@
-# Use an official Node runtime as a parent image
-FROM node:16
+FROM node:22-alpine AS builder
+ENV NODE_ENV production
 
-# Set the working directory to /app
+# Add a work directory
 WORKDIR /app
 
-# Copy the package.json and package-lock.json to the working directory
-COPY ./package*.json ./
+# Cache and Install dependencies
+COPY package.json .
+COPY yarn.lock .
+RUN npm i
 
-# Install the dependencies
-RUN npm install
-
-# Copy the remaining application files to the working directory
+# Copy app files
 COPY . .
 
-# Build the application
+# Build the app
 RUN npm run build
 
-# Expose port 3000 for the application
-EXPOSE 3000
+# Bundle static assets with nginx
+FROM nginx:1.21.0-alpine as production
+ENV NODE_ENV production
 
-# Start the application
-CMD [ "npm", "run", "start" ]
+# Copy built assets from builder
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# Add your nginx.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
