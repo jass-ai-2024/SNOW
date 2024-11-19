@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
-from typing import List, Optional
+from typing import List, Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 
@@ -34,6 +34,14 @@ async def get_document_place(
     return await service.get_place(document)
 
 
+@router.delete("/documents/{document_id}")
+async def delete_document(
+    document_id: int,
+    service: DocumentService = Depends(get_document_service)
+):
+    await service.delete_document(document_id)
+    return {"status": "success"}
+
 @router.post("/documents/create_folder/", response_model=FolderResponse)
 async def create_folder(
     folder: FolderCreate,
@@ -66,12 +74,22 @@ async def get_documents(
     return await service.get_documents(parent_id)
 
 
-@router.post("/search/")
+@router.get("/search/")
 async def search_documents(
     query: str,
     service: SearchService = Depends(get_search_service)
 ):
     return await service.search_documents(query)
+
+
+@router.post("/documents/{document_id}/move/{new_parent_id}")
+async def move_document(
+   document_id: int,
+   new_parent_id: Union[int, str],
+   service: DocumentService = Depends(get_document_service)
+):
+    new_parent_id = None if new_parent_id == 'root' else int(new_parent_id)
+    return await service.move_document(document_id, new_parent_id)
 
 
 @router.get("/documents/download/{document_id}")
@@ -80,7 +98,7 @@ async def download_document(
     service: DocumentService = Depends(get_document_service)
 ):
     file_path = await service.get_file(document_id)
-
+    print(document_id, file_path)
     if not file_path or not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
 

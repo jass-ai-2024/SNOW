@@ -1,6 +1,6 @@
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from app.models.document import Document
 
 
@@ -15,7 +15,11 @@ class DocumentRepository:
         return document
     
     async def get_by_parent(self, parent_id: Optional[int]) -> List[Document]:
-        query = select(Document).where(Document.parent_id == parent_id)
+        query = select(Document)
+
+        if parent_id is not None:
+            query = query.where(Document.parent_id == parent_id)
+
         result = await self.session.execute(query)
         return result.scalars().all()
 
@@ -33,3 +37,9 @@ class DocumentRepository:
         sql_query = select(Document).limit(3)
         result = await self.session.execute(sql_query)
         return result.scalars().all()
+
+    async def delete(self, document_id: int) -> None:
+        """Delete document by id"""
+        query = delete(Document).where(Document.id == document_id)
+        await self.session.execute(query)
+        await self.session.commit()

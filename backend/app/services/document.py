@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 
 from app.core.config import settings
 from app.models.document import Document
@@ -48,7 +48,7 @@ class DocumentService:
 
     async def create_folder(self, folder: FolderCreate) -> Dict[str, int]:
         doc = Document(
-            content="",
+            content=folder.name,
             doc_metadata={"type": "folder", "name": folder.name},
             parent_id=folder.parent_id
         )
@@ -75,3 +75,41 @@ class DocumentService:
         """Get file path for document"""
         doc = await self.repository.get_by_id(document_id)
         return settings.UPLOAD_DIR / doc.download_url
+
+    async def move_document(self, document_id: int, new_parent_id: int) -> Document:
+        """Move document to new parent folder"""
+        doc = await self.repository.get_by_id(document_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        if new_parent_id:
+            new_parent = await self.repository.get_by_id(new_parent_id)
+            if not new_parent or new_parent.doc_metadata.get("type") != "folder":
+                raise HTTPException(status_code=400, detail="Invalid destination folder")
+
+        doc.parent_id = new_parent_id
+        return await self.repository.update(doc)
+
+    async def delete_document(self, document_id: int) -> None:
+        doc = await self.repository.get_by_id(document_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        if doc.doc_metadata.get("type") == "folder":
+            # Проверяем, есть ли документы в папке
+            children = await self.repository.get_by_parent(doc.id)
+            if children:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot delete folder with documents"
+                )
+
+        # Если это файл, удаляем физический файл
+        if doc.doc_metadata.get("type") == "file" and doc.download_url:
+            try:
+                file_path = settings.UPLOAD_DIR / doc.download_url
+                file_path.unlink(missing_ok=True)
+            except Exception as e:
+                print(f"Error deleting file: {e}")
+
+        await self.repository.delete(doc.id)
