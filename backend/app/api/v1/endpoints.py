@@ -70,9 +70,10 @@ async def get_documents(
 
 @router.get("/documents/{parent_id}", response_model=List[DocumentResponse])
 async def get_documents(
-    parent_id: int = None,
+    parent_id: Union[int, str] = 'root',
     service: DocumentService = Depends(get_document_service)
 ):
+    parent_id = None if parent_id == 'root' else int(parent_id)
     return await service.get_documents(parent_id)
 
 
