@@ -58,4 +58,9 @@ export const documentsApi = {
     const response = await axios.delete(`${API_URL}/documents/${documentId}`);
     return response.data;
   },
+
+  getGraph: async () => {
+    const response = await axios.get(`${API_URL}/documents/graph/`);
+    return response.data;
+  }
 };

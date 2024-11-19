@@ -27,12 +27,18 @@ export const useDocuments = (parentId?: number, selectedId?: number) => {
     enabled: !!selectedId
   });
 
+  const { data: graphData } = useQuery({
+    queryKey: ['documents-graph'],
+    queryFn: documentsApi.getGraph
+  });
+
   return {
     documents: documents || [],
     isLoading,
     uploadDocument: uploadMutation.mutate,
     downloadDocument: downloadMutation.mutate,
     content,
-    isContentLoading
+    isContentLoading,
+    graphData
   };
 };

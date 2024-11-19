@@ -3,9 +3,10 @@ import { Box, Text, Spinner } from '@chakra-ui/react';
 import DocViewer, { DocViewerRenderers } from "react-doc-viewer";
 import { useDocuments } from '../../hooks/useDocuments';
 import {API_URL} from "../../config/api";
+import KnowledgeGraph from "./KnowledgeGraph";
 
 export const FileViewer: React.FC<{ documentId?: number }> = ({ documentId }) => {
-  const { documents, isLoading } = useDocuments();
+  const { documents, isLoading, graphData } = useDocuments();
   const document = documents.find(d => d.id === documentId);
 
   if (isLoading) {
@@ -27,9 +28,8 @@ export const FileViewer: React.FC<{ documentId?: number }> = ({ documentId }) =>
   if (document.doc_metadata.type === 'folder') {
     return (
       <Box p={4}>
-        <Text fontSize="lg" fontWeight="bold">
-          Folder: {document.content}
-        </Text>
+        <Text fontSize="lg" mb={4}>Folder: {document.content}</Text>
+        {graphData && <KnowledgeGraph data={graphData} />}
       </Box>
     );
   }
