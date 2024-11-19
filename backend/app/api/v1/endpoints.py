@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from typing import List, Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -107,3 +109,10 @@ async def download_document(
         filename=file_path.name,
         media_type="application/octet-stream"
     )
+
+
+@router.get("/documents/graph/")
+async def get_graph():
+    with open("graph.json", "r") as f:
+        result = eval(f.read())
+        return result
