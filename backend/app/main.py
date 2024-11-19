@@ -1,3 +1,5 @@
+import json
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.endpoints import router as v1_router
@@ -5,11 +7,11 @@ from app.api.v1.endpoints import router as v1_router
 
 app = FastAPI(title="Document Management API")
 
-origins = [
+origins = json.loads(json.dumps([
     "http://localhost:3000",
     "https://snowjass.ru",
     "https://www.snowjass.ru",
-]
+]))
 
 app.add_middleware(
     CORSMiddleware,
