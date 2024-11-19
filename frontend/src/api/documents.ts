@@ -3,7 +3,7 @@ import { API_URL } from '../config/api';
 import { Document } from '../types/documents';
 
 export const documentsApi = {
-  getAll: async (parentId?: number) => {
+  getAll: async (parentId?: number | string) => {
     const url = parentId
       ? `${API_URL}/documents/${parentId}`
       : `${API_URL}/documents/`;

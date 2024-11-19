@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { documentsApi } from '../api/documents';
 
-export const useDocuments = (parentId?: number, selectedId?: number) => {
+export const useDocuments = (parentId?: number | string, selectedId?: number) => {
   const queryClient = useQueryClient();
 
   const { data: documents, isLoading } = useQuery({

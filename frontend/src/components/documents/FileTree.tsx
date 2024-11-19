@@ -159,8 +159,8 @@ interface FileTreeProps {
 
 
 export const FileTree: React.FC<FileTreeProps> = ({ onSelect, selectedId }) => {
-  const { documents, isLoading } = useDocuments();
-
+  const { documents: allDocuments, isLoading } = useDocuments('root');
+  const documents = allDocuments.filter((doc: Document) => doc.parent_id === null)
   if (isLoading) return <Loader2 className="animate-spin" />;
 
   return (
