@@ -13,6 +13,7 @@ from app.schemas.document import (
     PlaceResponse
 )
 from app.services.document import DocumentService
+from app.services.rag import DocumentProcessor
 from app.services.search import SearchService
 from app.core.database import get_session
 from app.repositories.document import DocumentRepository
@@ -21,7 +22,7 @@ router = APIRouter()
 
 
 async def get_document_service(session: AsyncSession = Depends(get_session)) -> DocumentService:
-    return DocumentService(DocumentRepository(session))
+    return DocumentService(DocumentRepository(session), DocumentProcessor())
 
 
 async def get_search_service(session: AsyncSession = Depends(get_session)) -> SearchService:
@@ -112,8 +113,12 @@ async def download_document(
     )
 
 
-@router.get("/documents/graph/")
-async def get_graph():
-    with open("graph.json", "r") as f:
-        result = eval(f.read())
-        return result
+@router.get("/graph/")
+async def get_graph(service: DocumentService = Depends(get_document_service)):
+    documents = await service.get_documents()
+    name2document = {d.download_url: d for d in documents}
+
+    with open("storage/document_state.json", "r") as f:
+        raw_documents = json.loads(f.read())
+
+        return raw_documents

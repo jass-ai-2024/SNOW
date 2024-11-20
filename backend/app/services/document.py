@@ -11,11 +11,13 @@ from app.core.config import settings
 from app.models.document import Document
 from app.schemas.document import DocumentCreate, FolderCreate
 from app.repositories.document import DocumentRepository
+from app.services.rag import DocumentProcessor
 
 
 class DocumentService:
-    def __init__(self, repository: DocumentRepository):
+    def __init__(self, repository: DocumentRepository, processor: DocumentProcessor):
         self.repository = repository
+        self.processor = processor
 
     def _generate_safe_filename(self, original_filename: str) -> str:
         """Generate unique filename with timestamp and UUID"""
@@ -37,6 +39,7 @@ class DocumentService:
             raise Exception(f"Failed to save file: {str(e)}")
 
         return file_path
+
     async def get_place(self, document: DocumentCreate) -> Dict[str, any]:
         """Determine the best place for a document based on content"""
         # Here you would implement your logic to analyze content and suggest placement
@@ -65,6 +68,8 @@ class DocumentService:
             download_url=str(file_path.name),
         )
         doc = await self.repository.create(doc)
+
+        self.processor.add_document("data/" + doc.download_url)
 
         return doc
 

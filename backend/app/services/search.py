@@ -22,12 +22,3 @@ class SearchService:
                 for doc in documents
             ]
         }
-
-
-async def search(self, query: str):
-    # Basic search implementation
-    # In real application, you might want to use full-text search or vector similarity
-    query = f"%{query}%"
-    stmt = select(Document).where(Document.content.ilike(query))
-    result = await self.session.execute(stmt)
-    return result.scalars().all()

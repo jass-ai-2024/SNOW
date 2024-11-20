@@ -3,8 +3,15 @@ uvicorn==0.27.1
 sqlalchemy==2.0.27
 alembic==1.13.1
 asyncpg==0.29.0
-pydantic==2.6.1
+pydantic~=2.9.2
 pydantic-settings==2.1.0
 python-multipart==0.0.17
 greenlet==3.1.1
 psycopg2-binary
+llama-index
+llama-index-embeddings-text-embeddings-inference
+llama-index-llms-anthropic
+qdrant_client
+starlette~=0.36.3
+numpy~=2.0.2
+scikit-learn~=1.5.2
