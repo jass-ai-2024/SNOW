@@ -60,7 +60,7 @@ export const documentsApi = {
   },
 
   getGraph: async () => {
-    const response = await axios.get(`${API_URL}/documents/graph/`);
+    const response = await axios.get(`${API_URL}/graph/`);
     return response.data;
   }
 };

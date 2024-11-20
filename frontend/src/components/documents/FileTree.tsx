@@ -3,17 +3,7 @@ import {
   Box,
   HStack,
   Text,
-  VStack,
-  useDisclosure,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverHeader,
-  PopoverBody,
-  PopoverFooter,
-  PopoverArrow,
-  IconButton,
-  Button,
+  VStack
 } from '@chakra-ui/react';
 import {Folder, FileText, ChevronRight, ChevronDown, Loader2, Trash2, AlertCircle} from 'lucide-react';
 import { Droppable, Draggable } from 'react-beautiful-dnd';

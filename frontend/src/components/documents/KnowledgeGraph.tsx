@@ -1,119 +1,179 @@
 import React, { useMemo } from 'react';
-import Plot from 'react-plotly.js';
-import { Data, Layout } from 'plotly.js';
+import ReactFlow, {
+  Background,
+  Controls,
+  MiniMap,
+  Handle,
+  Position,
+  useNodesState,
+  useEdgesState,
+  Node,
+  Edge,
+  NodeProps,
+  MarkerType
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 
-interface Node {
-  id: string;
+interface NodeData {
   title: string;
-  summary: string;
-  relationships: string[];
-  relationship_type: string;
-  key_concepts: string[];
+  level: number;
 }
 
+type CustomNode = Node<NodeData>;
+type CustomEdge = Edge;
+
+
+const CustomNode = ({ data }: NodeProps<NodeData>) => {
+  const getNodeColor = (level: number) => {
+    const colors = ['#60a5fa', '#34d399', '#a78bfa', '#f472b6', '#fbbf24'];
+    return colors[level % colors.length];
+  };
+
+  return (
+    <div className="relative">
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!bg-white !w-2 !h-2 !border-2"
+        style={{ borderColor: getNodeColor(data.level) }}
+      />
+
+      {/* Outer circle with shadow */}
+      <div
+        className="w-16 h-16 rounded-full flex items-center justify-center shadow-md"
+        style={{
+          background: getNodeColor(data.level),
+          border: '2px solid white',
+          width: 200,
+          height: 200,
+          borderRadius: 100,
+          justifyContent: "center",
+          alignItems: "center",
+          verticalAlign: "middle",
+            display: "flex"
+        }}
+      >
+        {/* Title with ellipsis */}
+        <div
+          className="text-white text-sm font-medium px-2 truncate max-w-[56px]"
+          title={data.title}
+            style={{textAlign: "center", color: "white", stroke: "1px solid black"}}
+        >
+          {data.title}
+        </div>
+      </div>
+
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!bg-white !w-2 !h-2 !border-2"
+        style={{ borderColor: getNodeColor(data.level) }}
+      />
+    </div>
+  );
+};
+
+const nodeTypes = {
+  custom: CustomNode,
+};
+
 const KnowledgeGraph: React.FC<{ data: any }> = ({ data }) => {
-  const { nodes, edges } = useMemo(() => {
-    const nodes: Node[] = [];
-    const edges: { from: string; to: string }[] = [];
-    const processed = new Set();
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
+    const nodes: CustomNode[] = [];
+    const edges: CustomEdge[] = [];
 
-    Object.values(data.documents).forEach((doc: any) => {
-      if (doc.hierarchy) {
-        nodes.push({
-          id: doc.metadata.doc_id,
-          title: doc.hierarchy.title || doc.metadata.file_name,
-          summary: doc.hierarchy.summary || '',
-          relationships: doc.hierarchy.relationships || [],
-          relationship_type: doc.hierarchy.relationship_type || '',
-          key_concepts: doc.hierarchy.key_concepts || []
-        });
-
-        if (!processed.has(doc.metadata.doc_id)) {
-          (doc.hierarchy.relationships || []).forEach((relatedId: string) => {
-            edges.push({ from: doc.metadata.doc_id, to: relatedId });
-          });
-          processed.add(doc.metadata.doc_id);
+    // Create nodes
+    Object.entries(data.hierarchy).forEach(([docId, doc]: [string, any]) => {
+      nodes.push({
+        id: docId,
+        type: 'custom',
+        position: { x: 0, y: 0 },
+        data: {
+          title: doc.title,
+          level: doc.level
         }
-      }
+      });
+
+      // Create edges
+      (doc.relationships || []).forEach((targetId: string) => {
+        edges.push({
+          id: `${docId}-${targetId}`,
+          source: docId,
+          target: targetId,
+          type: 'bezier', // Changed to default for straight lines
+          style: {
+            strokeWidth: 1.5,
+            stroke: '#94a3b8'
+          },
+            label: "child",
+          markerEnd: {
+            type: MarkerType.Arrow,
+            width: 15,
+            height: 15,
+            color: '#94a3b8',
+          },
+        });
+      });
+    });
+
+    // Layout nodes
+    nodes.forEach((node: CustomNode) => {
+      const horizontalSpacing = 200;
+      const verticalSpacing = 150;
+
+      node.position = {
+        x: node.data.level * horizontalSpacing + (Math.random() * 50 - 25),
+        y: (node.id.length % 3) * verticalSpacing + (Math.random() * 50 - 25)
+      };
     });
 
     return { nodes, edges };
   }, [data]);
 
-  // Calculate node positions in a circle
-  const nodePositions = nodes.map((_, i) => ({
-    x: Math.cos(2 * Math.PI * i / nodes.length),
-    y: Math.sin(2 * Math.PI * i / nodes.length)
-  }));
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Create node scatter plot
-  const nodesTrace: Data = {
-    type: 'scatter',
-    x: nodePositions.map(p => p.x),
-    y: nodePositions.map(p => p.y),
-    mode: 'text+markers',
-    text: nodes.map(n => n.title),
-    textposition: 'top center',
-    hovertext: nodes.map(n =>
-      `${n.title}\n\nSummary: ${n.summary}\n\nKey Concepts: ${n.key_concepts.join(', ')}`
-    ),
-    hoverinfo: 'text',
-    marker: {
-      size: 20,
-      color: nodes.map(n => ['parent', 'child', 'sibling'].indexOf(n.relationship_type)),
-      colorscale: 'Viridis'
-    }
-  };
-
-  // Create edges
-  const edgesTraces: any = edges.map(edge => {
-    const fromNode = nodes.findIndex(n => n.id === edge.from);
-    const toNode = nodes.findIndex(n => n.id === edge.to);
-
-    if (fromNode === -1 || toNode === -1) return null;
-
-    return {
-      type: 'scatter',
-      x: [nodePositions[fromNode].x, nodePositions[toNode].x],
-      y: [nodePositions[fromNode].y, nodePositions[toNode].y],
-      mode: 'lines',
-      line: {
-        color: '#a0a0a0',
-        width: 1
-      },
-      hoverinfo: 'none'
-    } as Data;
-  }).filter(Boolean);
-
-  const plotLayout: Partial<Layout> = {
-    title: 'Knowledge Graph',
-    showlegend: false,
-    hovermode: 'closest',
-    margin: { l: 50, r: 50, b: 50, t: 50 },
-    xaxis: {
-      showgrid: false,
-      zeroline: false,
-      showticklabels: false,
-      range: [-1.5, 1.5]
-    },
-    yaxis: {
-      showgrid: false,
-      zeroline: false,
-      showticklabels: false,
-      range: [-1.5, 1.5]
-    },
-    width: 800,
-    height: 600
-  };
+  const proOptions = { hideAttribution: true };
 
   return (
-    <Plot
-      data={[...edgesTraces, nodesTrace]}
-      layout={plotLayout}
-      useResizeHandler
-      style={{ width: '100%', height: '600px' }}
-    />
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      nodeTypes={nodeTypes}
+      fitView
+      proOptions={proOptions}
+      defaultEdgeOptions={{
+        type: 'default',
+        style: { stroke: '#94a3b8' },
+      }}
+    >
+      <Background color="#f1f5f9" gap={16} />
+      <Controls
+        className="bg-white border-none shadow-md rounded-md"
+        showInteractive={false}
+      />
+      <MiniMap
+        nodeColor={(node: CustomNode) => {
+          const colors = ['#60a5fa', '#34d399', '#a78bfa', '#f472b6', '#fbbf24'];
+          return colors[node.data.level % colors.length];
+        }}
+        maskColor="rgb(241, 245, 249, 0.8)"
+        className="bg-white shadow-md rounded-md"
+        zoomable
+        pannable
+      />
+    </ReactFlow>
   );
 };
 
-export default KnowledgeGraph;
+const KnowledgeGraphWrapper: React.FC<{ data: any }> = ({ data }) => {
+  return (
+    <div style={{width: "100%", height: "100%", position: "absolute"}}>
+      <KnowledgeGraph data={data} />
+    </div>
+  );
+};
+
+export default KnowledgeGraphWrapper;
