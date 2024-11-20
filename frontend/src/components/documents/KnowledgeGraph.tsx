@@ -170,7 +170,7 @@ const KnowledgeGraph: React.FC<{ data: any }> = ({ data }) => {
 
 const KnowledgeGraphWrapper: React.FC<{ data: any }> = ({ data }) => {
   return (
-    <div style={{width: "100%", height: "100%", position: "absolute"}}>
+    <div style={{width: "100%", height: "80%", position: "absolute"}}>
       <KnowledgeGraph data={data} />
     </div>
   );

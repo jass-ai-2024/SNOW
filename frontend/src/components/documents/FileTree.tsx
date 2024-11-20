@@ -13,7 +13,7 @@ import {useDocuments} from "../../hooks/useDocuments";
 import {FileContextMenu} from "./FileContextMenu";
 import {documentsApi} from "../../api/documents";
 import {useQueryClient} from "@tanstack/react-query";
-import {DeleteConfirmDialog} from "./DeleteConfirmDialog";
+
 
 interface FileTreeItemProps {
   document: Document;

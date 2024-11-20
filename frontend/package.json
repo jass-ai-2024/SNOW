@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@chakra-ui/progress": "^2.2.0",
     "@chakra-ui/react": "^3.1.2",
     "@neo4j-nvl/react": "^0.3.1",
     "@radix-ui/react-alert-dialog": "^1.1.2",
@@ -15,6 +16,7 @@
     "@types/dagre": "^0.7.52",
     "@types/plotly.js": "^2.35.0",
     "@types/react-beautiful-dnd": "^13.1.8",
+    "@types/react-modal": "^3.16.3",
     "axios": "^1.7.7",
     "d3": "^7.9.0",
     "dagre": "^0.8.5",
@@ -25,6 +27,7 @@
     "react-dom": "^18.3.1",
     "react-dropzone": "^14.3.5",
     "react-icons": "^5.3.0",
+    "react-modal": "^3.16.1",
     "react-plotly.js": "^2.6.0",
     "react-scripts": "5.0.1",
     "reactflow": "^11.11.4",
