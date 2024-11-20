@@ -26,6 +26,20 @@ export const documentsApi = {
     return response.data;
   },
 
+  updateDocument: async (documentId: number, newValue: string) => {
+      const response = await fetch(
+        `${API_URL}/arch/update/`, {
+            method: "POST",
+            body: JSON.stringify({id: documentId, content: newValue}),
+            headers: {
+                'Content-Type': 'application/json'  // Add this header
+            },
+          }
+      );
+
+      return await response.json();
+  },
+
   download: async (documentId: number) => {
     const response = await axios.get(
       `${API_URL}/documents/download/${documentId}`,

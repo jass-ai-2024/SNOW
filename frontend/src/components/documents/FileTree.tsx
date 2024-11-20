@@ -94,7 +94,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({ document, onSelect, selecte
                   ) : (
                     <FileText size={18} className="text-gray-500" />
                   )}
-                  <Text>{document.content}</Text>
+                  <Text>{document.download_url}</Text>
 
                   {isHovered && (
                     <button
