@@ -2,6 +2,8 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from typing import List, Optional, Union
+
+import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 
@@ -10,7 +12,8 @@ from app.schemas.document import (
     DocumentResponse, 
     FolderCreate, 
     FolderResponse, 
-    PlaceResponse
+    PlaceResponse,
+    ArchData,
 )
 from app.services.document import DocumentService
 from app.services.rag import DocumentProcessor
@@ -57,9 +60,10 @@ async def create_folder(
 async def create_document(
     file: UploadFile,
     parent_id: Optional[int] = None,
+    metadata: Optional[str] = None,
     service: DocumentService = Depends(get_document_service)
 ):
-    return await service.create_document(file, parent_id)
+    return await service.create_document(file, parent_id, metadata)
 
 
 @router.get("/documents/", response_model=List[DocumentResponse])
@@ -115,10 +119,35 @@ async def download_document(
 
 @router.get("/graph/")
 async def get_graph(service: DocumentService = Depends(get_document_service)):
-    documents = await service.get_documents()
-    name2document = {d.download_url: d for d in documents}
-
     with open("storage/document_state.json", "r") as f:
         raw_documents = json.loads(f.read())
 
         return raw_documents
+
+
+@router.post("/arch/update/")
+async def arch_update(
+    arch_data: ArchData,
+    service: DocumentService = Depends(get_document_service)
+):
+    document = await service.get_document_by_id(arch_data.id)
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    document.content = arch_data.content
+    await service.repository.update(document)
+
+    if "callback_url" not in document.doc_metadata and "document_id" not in document.doc_metadata:
+        raise HTTPException(status_code=404, detail="Document for arch not found")
+
+    async with aiohttp.ClientSession() as session:
+        await session.post(
+            document.doc_metadata["callback_url"],
+            json={
+                "content": arch_data.content,
+                "id": document.doc_metadata["document_id"]
+            }
+        )
+
+    return {"status": "success"}

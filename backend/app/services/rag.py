@@ -17,6 +17,8 @@ from llama_index.core.schema import RelatedNodeInfo, NodeRelationship, TextNode
 from llama_index.llms.anthropic import Anthropic
 from llama_index.embeddings.text_embeddings_inference import TextEmbeddingsInference
 from llama_index.readers.file.docs import PDFReader
+from llama_index.readers.file import MarkdownReader
+from llama_index.core import SimpleDirectoryReader
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
@@ -112,16 +114,19 @@ class DocumentProcessor:
             print(f"Error saving state: {str(e)}")
 
     def load_doc(self, doc_path: str) -> Document:
-        reader = PDFReader(return_full_document=True)
-        doc = reader.load_data(Path(doc_path))[0]
+        reader = SimpleDirectoryReader(
+            input_files=[Path(doc_path)]
+        )
+        doc = reader.load_data()[0]
 
         try:
             file_path = doc.metadata.get("file_name", "")
             doc_id = Path(file_path).stem
 
             # Generate summary once and store it
-            summary = self.generate_document_summary(doc)
-            self.document_summaries[doc_id] = summary
+            if doc_id not in self.document_summaries:
+                self.document_summaries[doc_id] = self.generate_document_summary(doc)
+            summary = self.document_summaries[doc_id]
 
             document = Document(
                 text=doc.get_content(),
@@ -486,7 +491,7 @@ class DocumentProcessor:
         except Exception as e:
             print(f"Error updating hierarchy: {str(e)}")
 
-    def add_document(self, doc_path: str) -> Optional[str]:
+    def add_document(self, doc_path: str) -> Optional[Document]:
         """Add a single document to the system"""
         try:
             # Load document
@@ -560,7 +565,7 @@ class DocumentProcessor:
             self.save_state()
 
             print(f"Successfully added document: {doc_id}")
-            return doc_id
+            return document
 
         except Exception as e:
             print(f"Error adding document: {str(e)}")

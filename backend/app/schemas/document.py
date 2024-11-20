@@ -12,6 +12,11 @@ class DocumentCreate(DocumentBase):
     pass
 
 
+class ArchData(BaseModel):
+    id: int
+    content: str
+
+
 class DocumentResponse(DocumentBase):
     id: int
     download_url: Optional[str] = None

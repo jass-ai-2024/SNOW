@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import uuid
@@ -58,20 +59,29 @@ class DocumentService:
         created = await self.repository.create(doc)
         return {"id": created.id}
     
-    async def create_document(self, file: UploadFile, parent_id: Optional[int] = None) -> Document:
+    async def create_document(self, file: UploadFile, parent_id: Optional[int] = None, metadata: Optional[str] = None) -> Document:
+        if not metadata:
+            metadata = {}
+        else:
+            metadata = json.loads(metadata)
+
         file_path = await self.save_file(file)
 
         doc = Document(
             content=file.filename,
-            doc_metadata={"type": "file", "mime_type": file.content_type},
+            doc_metadata={**metadata, "type": "file", "mime_type": file.content_type},
             parent_id=parent_id,
             download_url=str(file_path.name),
         )
         doc = await self.repository.create(doc)
 
-        self.processor.add_document("data/" + doc.download_url)
+        llama_document = self.processor.add_document("data/" + doc.download_url)
 
-        return doc
+        if llama_document:
+            doc.metadata = llama_document.metadata
+            doc.content = llama_document.get_content()
+
+        return await self.repository.update(doc)
 
     async def get_documents(self, parent_id: Optional[int] = None) -> List[Document]:
         return await self.repository.get_by_parent(parent_id)
@@ -80,6 +90,9 @@ class DocumentService:
         """Get file path for document"""
         doc = await self.repository.get_by_id(document_id)
         return settings.UPLOAD_DIR / doc.download_url
+
+    async def get_document_by_id(self, document_id: int) -> Document:
+        return await self.repository.get_by_id(document_id)
 
     async def move_document(self, document_id: int, new_parent_id: int) -> Document:
         """Move document to new parent folder"""
