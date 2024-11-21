@@ -12,6 +12,8 @@ RUN npm i
 # Copy app files
 COPY . .
 
+RUN cp -r node_modules/pdfjs-dist/* node_modules/react-pdf/node_modules/pdfjs-dist/
+
 # Build the app
 RUN npm run build
 

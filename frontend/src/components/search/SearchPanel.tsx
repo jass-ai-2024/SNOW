@@ -45,6 +45,7 @@ export const SearchPanel: React.FC = () => {
         </Button>
       </Box>
 
+      <Text>{results?.answer}</Text>
       {results?.documents.map(doc => (
         <Box
           key={doc.id}
