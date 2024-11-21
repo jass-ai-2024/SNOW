@@ -8,10 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 
 from app.schemas.document import (
-    DocumentCreate, 
-    DocumentResponse, 
-    FolderCreate, 
-    FolderResponse, 
+    DocumentCreate,
+    DocumentResponse,
+    FolderCreate,
+    FolderResponse,
     PlaceResponse,
     ArchData,
 )
@@ -29,7 +29,7 @@ async def get_document_service(session: AsyncSession = Depends(get_session)) -> 
 
 
 async def get_search_service(session: AsyncSession = Depends(get_session)) -> SearchService:
-    return SearchService(DocumentRepository(session))
+    return SearchService(DocumentProcessor())
 
 
 @router.post("/documents/get_place/", response_model=PlaceResponse)
@@ -119,7 +119,7 @@ async def download_document(
 
 @router.get("/graph/")
 async def get_graph(service: DocumentService = Depends(get_document_service)):
-    with open("storage/document_state.json", "r") as f:
+    with open("./storage/document_state.json", "r") as f:
         raw_documents = json.loads(f.read())
 
         return raw_documents

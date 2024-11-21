@@ -1,3 +1,4 @@
+import logging
 import traceback
 from datetime import datetime
 import json
@@ -25,6 +26,9 @@ from qdrant_client.http import models
 from qdrant_client.http.models import Distance, VectorParams
 
 from app.core.config import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class CustomDirectoryReader(SimpleDirectoryReader):
@@ -676,6 +680,7 @@ class DocumentProcessor:
     ) -> Dict[str, Any]:
         """Query using Qdrant vector search with node context"""
         try:
+            logger.error(query_text)
             query_embedding = self.embed_model.get_text_embedding(query_text)
 
             # Search in Qdrant
@@ -750,6 +755,7 @@ class DocumentProcessor:
             }
 
         except Exception as e:
+            logger.exception(e)
             print(f"Error in query processing: {str(e)}")
             return {
                 "response": "",
