@@ -108,9 +108,9 @@ export const FileViewer: React.FC<{ documentId?: number }> = ({ documentId }) =>
       {fileType === "text/plain"
           ? <Box h="calc(100vh - 100px)" position="relative">
               <Box position="absolute" top={2} right={2} zIndex={10}>
-                <Button colorScheme="blue" size="sm" onClick={handleUpdate}>
-                  Update
-                </Button>
+                {/*<Button colorScheme="blue" size="sm" onClick={handleUpdate}>*/}
+                {/*  Update*/}
+                {/*</Button>*/}
               </Box>
               <Editor
                 height="100%"
@@ -124,7 +124,7 @@ export const FileViewer: React.FC<{ documentId?: number }> = ({ documentId }) =>
                   theme: 'vs-light',
                   scrollBeyondLastLine: false,
                   automaticLayout: true,
-                  readOnly: false
+                  readOnly: true
                 }}
               />
             </Box>

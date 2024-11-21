@@ -13,7 +13,8 @@ import ReactFlow, {
   MarkerType
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import {stratify, tree} from "d3";
+import { stratify, tree } from 'd3-hierarchy';
+
 
 interface NodeData {
   title: string;
@@ -77,6 +78,82 @@ const CustomNode = ({ data }: NodeProps<NodeData>) => {
 const nodeTypes = {
   custom: CustomNode,
 };
+
+function layoutNodesHierarchically(nodes, edges) {
+  // Построим граф для проверки циклов
+  const graph = new Map();
+  nodes.forEach(node => graph.set(node.id, new Set()));
+  edges.forEach(edge => graph.get(edge.source).add(edge.target));
+
+  // Функция для проверки цикла
+  function hasCycle(node, visited = new Set(), path = new Set()) {
+    if (path.has(node)) return true;
+    if (visited.has(node)) return false;
+
+    visited.add(node);
+    path.add(node);
+
+    const neighbors = graph.get(node);
+    for (const neighbor of neighbors) {
+      if (hasCycle(neighbor, visited, path)) return true;
+    }
+
+    path.delete(node);
+    return false;
+  }
+
+  // Проверяем и удаляем циклические связи
+  const validEdges = edges.filter(edge => {
+    const hasLoop = hasCycle(edge.source);
+    if (hasLoop) {
+      graph.get(edge.source).delete(edge.target);
+      return false;
+    }
+    return true;
+  });
+
+  const virtualRootId = 'virtual-root';
+  const rootNodes = nodes.filter(node =>
+    !validEdges.some(edge => edge.target === node.id)
+  );
+
+  const virtualEdges = rootNodes.map(node => ({
+    source: virtualRootId,
+    target: node.id
+  }));
+
+  const nodesWithRoot = [
+    { id: virtualRootId, data: { title: 'Root', level: -1 }, position: { x: 0, y: 0 } },
+    ...nodes
+  ];
+
+  const hierarchy = stratify()
+    .id((d: any) => d.id)
+    .parentId((d: any) => {
+      const parentEdge = [...validEdges, ...virtualEdges].find(e => e.target === d.id);
+      return parentEdge ? parentEdge.source : null;
+    })(nodesWithRoot);
+
+  const treeLayout = tree()
+    .nodeSize([250, 400]);
+
+  const root = treeLayout(hierarchy);
+
+  root.each(node => {
+    if (node.id !== virtualRootId) {
+      const originalNode = nodes.find(n => n.id === node.id);
+      if (originalNode) {
+        originalNode.position = {
+          x: node.x,
+          y: node.y
+        };
+      }
+    }
+  });
+
+  return nodes;
+}
+
 
 const KnowledgeGraph: React.FC<{ data: any }> = ({ data }) => {
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
@@ -143,15 +220,7 @@ const KnowledgeGraph: React.FC<{ data: any }> = ({ data }) => {
     });
 
     // Layout nodes
-    nodes.forEach((node: CustomNode) => {
-      const horizontalSpacing = 200;
-      const verticalSpacing = 150;
-
-      node.position = {
-        x: node.data.level * horizontalSpacing + (Math.random() * 50 - 25),
-        y: (node.id.length % 3) * verticalSpacing + (Math.random() * 50 - 25)
-      };
-    });
+    layoutNodesHierarchically(nodes, edges);
 
     return { nodes, edges };
   }, [data]);
