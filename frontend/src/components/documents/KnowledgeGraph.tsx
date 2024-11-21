@@ -108,7 +108,7 @@ const KnowledgeGraph: React.FC<{ data: any }> = ({ data }) => {
             strokeWidth: 1.5,
             stroke: '#94a3b8'
           },
-            label: "children",
+            label: "child",
           markerEnd: {
             type: MarkerType.Arrow,
             width: 15,
@@ -118,11 +118,12 @@ const KnowledgeGraph: React.FC<{ data: any }> = ({ data }) => {
         });
       });
 
-      (doc.relationships || []).forEach((targetId: string) => {
-        if (doc.relationship_type !== "related") {
-          return;
-        }
-
+      (doc.relationships || [])
+          .filter(targetId => !(doc.children || []).includes(targetId))
+          .forEach((targetId: string) => {
+            if(doc.relationship_type === "child") {
+              return;
+            }
         edges.push({
           id: `${docId}-${targetId}`,
           source: docId,
