@@ -403,11 +403,21 @@ class DocumentProcessor:
                     "children": ["child_doc_ids"],
                     "level": 0,
                     "relationships": ["related_doc_ids"],
-                    "relationship_type": "parent/child/sibling/related",
+                    "relationship_type": "none",  # Must be one of: "parent", "child", "related", "none"
                     "key_concepts": ["main concepts"],
                     "similarity_scores": {{"doc_id": score}} // similarity to other docs
                 }}
             }}
+            
+            Rules for relationship assignment:
+            1. parent_id should be set only if the document directly builds upon or extends another document
+            2. relationship_type "parent" means this document is a foundation for others
+            3. relationship_type "child" means this document builds upon another
+            4. relationship_type "related" means documents share topics but no clear hierarchy
+            5. relationship_type "none" means document is independent
+            6. Set relationship_strength based on confidence in the relationship (0.0-1.0)
+            7. Provide specific topic_overlap only for related documents
+            8. citation_type should reflect how documents reference each other
             """
 
             response = self.llm.complete(hierarchy_prompt)
