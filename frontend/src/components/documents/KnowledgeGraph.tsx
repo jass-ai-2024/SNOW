@@ -95,8 +95,10 @@ const KnowledgeGraph: React.FC<{ data: any }> = ({ data }) => {
         }
       });
 
+      console.log(doc);
+
       // Create edges
-      (doc.relationships || []).forEach((targetId: string) => {
+      (doc.children || []).forEach((targetId: string) => {
         edges.push({
           id: `${docId}-${targetId}`,
           source: docId,
@@ -106,7 +108,31 @@ const KnowledgeGraph: React.FC<{ data: any }> = ({ data }) => {
             strokeWidth: 1.5,
             stroke: '#94a3b8'
           },
-            label: "child",
+            label: "children",
+          markerEnd: {
+            type: MarkerType.Arrow,
+            width: 15,
+            height: 15,
+            color: '#94a3b8',
+          },
+        });
+      });
+
+      (doc.relationships || []).forEach((targetId: string) => {
+        if (doc.relationship_type !== "related") {
+          return;
+        }
+
+        edges.push({
+          id: `${docId}-${targetId}`,
+          source: docId,
+          target: targetId,
+          type: 'bezier', // Changed to default for straight lines
+          style: {
+            strokeWidth: 1.5,
+            stroke: '#94a3b8'
+          },
+            label: "related",
           markerEnd: {
             type: MarkerType.Arrow,
             width: 15,
