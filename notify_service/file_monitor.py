@@ -1,15 +1,15 @@
-import inotify.adapters
 import sys
 import os
-import aiohttp
 import asyncio
-from pathlib import Path
+import aiohttp
 import mimetypes
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 
 class DocumentUploader:
     def __init__(self):
-        self.api_url = "https://api.snowjass.ru/v1/documents"
+        self.api_url = "https://api.snowjass.ru/v1/documents/"
         self.supported_extensions = {'.txt', '.pdf'}
         self.session = None
 
@@ -31,12 +31,16 @@ class DocumentUploader:
 
             mime_type = mimetypes.guess_type(file_path)[0]
 
+            # Читаем содержимое файла перед формированием FormData
             with open(file_path, 'rb') as f:
-                data = aiohttp.FormData()
-                data.add_field('file',
-                               f,
-                               filename=os.path.basename(file_path),
-                               content_type=mime_type)
+                file_content = f.read()
+
+            # Создаем FormData с уже прочитанным содержимым
+            data = aiohttp.FormData()
+            data.add_field('file',
+                           file_content,
+                           filename=os.path.basename(file_path),
+                           content_type=mime_type)
 
             async with self.session.post(self.api_url, data=data) as response:
                 if response.status == 200:
@@ -51,42 +55,65 @@ class DocumentUploader:
             print(f"Error uploading {file_path}: {str(e)}")
 
 
+class FileEventHandler(FileSystemEventHandler):
+    def __init__(self, loop, uploader):
+        self.loop = loop
+        self.uploader = uploader
+        super().__init__()
+
+    def on_created(self, event):
+        if not event.is_directory:
+            self._handle_file_event(event.src_path, "created")
+
+    def on_modified(self, event):
+        if not event.is_directory:
+            self._handle_file_event(event.src_path, "modified")
+
+    def on_moved(self, event):
+        if not event.is_directory:
+            self._handle_file_event(event.dest_path, "moved")
+
+    def _handle_file_event(self, file_path, event_type):
+        if any(file_path.lower().endswith(ext) for ext in self.uploader.supported_extensions):
+            print(f"File {event_type}: {file_path}")
+            asyncio.run_coroutine_threadsafe(
+                self.delayed_upload(file_path),
+                self.loop
+            )
+
+    async def delayed_upload(self, file_path, delay=0.5):
+        """Загрузка файла с небольшой задержкой"""
+        await asyncio.sleep(delay)
+        await self.uploader.upload_file(file_path)
+
+
 class FileMonitor:
-    def __init__(self, path):
+    def __init__(self, path, loop):
         self.path = path
+        self.loop = loop
         self.uploader = DocumentUploader()
-        self.inotify = inotify.adapters.InotifyTree(path)
-        self.loop = asyncio.get_event_loop()
+        self.observer = Observer()
+        self.event_handler = FileEventHandler(loop, self.uploader)
 
-    def process_event(self, event):
-        mask_types = event[1]
-        file_path = os.path.join(event[2], event[3].decode('utf-8')) if event[3] else event[2]
-
-        if ('IN_CLOSE_WRITE' in mask_types or
-            'IN_MOVED_TO' in mask_types) and \
-                any(file_path.lower().endswith(ext) for ext in self.uploader.supported_extensions):
-
-            print(f"File event detected: {file_path}")
-            if 'IN_CLOSE_WRITE' in mask_types:
-                print(f"File modified/created: {file_path}")
-            elif 'IN_MOVED_TO' in mask_types:
-                print(f"File moved to watch directory: {file_path}")
-
-            self.loop.create_task(self.uploader.upload_file(file_path))
-
-    async def monitor(self):
-        """Асинхронный мониторинг файловой системы"""
+    async def start(self):
+        """Запуск мониторинга файловой системы"""
         await self.uploader.init_session()
 
-        try:
-            for event in self.inotify.event_gen(yield_nones=False):
-                self.process_event(event)
-                await asyncio.sleep(0)  # Даём шанс другим корутинам выполниться
+        self.observer.schedule(self.event_handler, self.path, recursive=True)
+        self.observer.start()
 
+        try:
+            while True:
+                await asyncio.sleep(1)
         except KeyboardInterrupt:
-            print("\nStopping monitoring...")
-        finally:
-            await self.uploader.close_session()
+            await self.stop()
+
+    async def stop(self):
+        """Остановка мониторинга"""
+        print("\nStopping monitoring...")
+        self.observer.stop()
+        await self.uploader.close_session()
+        self.observer.join()
 
 
 async def main(path):
@@ -94,21 +121,20 @@ async def main(path):
         print(f"Directory {path} does not exist!")
         return
 
-    monitor = FileMonitor(path)
+    loop = asyncio.get_event_loop()
+    monitor = FileMonitor(path, loop)
+
     print(f"Starting monitoring directory: {path}")
     print(f"Watching for files with extensions: {', '.join(monitor.uploader.supported_extensions)}")
     print("Press Ctrl+C to stop")
 
-    await monitor.monitor()
+    await monitor.start()
 
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else "/monitored"
+    path = sys.argv[1] if len(sys.argv) > 1 else "./monitored"
 
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(main(path))
+        asyncio.run(main(path))
     except KeyboardInterrupt:
         pass
-    finally:
-        loop.close()
