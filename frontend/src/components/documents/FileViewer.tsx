@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Box, Text, Spinner, Button, VStack, HStack} from '@chakra-ui/react';
 import DocViewer, { DocViewerRenderers } from "react-doc-viewer";
 import { useDocuments } from '../../hooks/useDocuments';
@@ -18,6 +18,7 @@ export const FileViewer: React.FC<{ documentId?: number }> = ({ documentId }) =>
   const [editorContent, setEditorContent] = useState(document?.content || "");
   const [numPages, setNumPages] = useState<number>(10);
   const [pageNumber, setPageNumber] = useState(1);
+
 
 	const onDocumentLoadSuccess = ({ numPages }) => {
 		setNumPages(numPages);
@@ -51,6 +52,12 @@ export const FileViewer: React.FC<{ documentId?: number }> = ({ documentId }) =>
       }
     }
   };
+
+
+    useEffect(() => {
+          setEditorContent(document?.content || "");
+    }, [documentId]);
+
 
   if (isLoading) {
     return (
@@ -86,7 +93,8 @@ export const FileViewer: React.FC<{ documentId?: number }> = ({ documentId }) =>
   }
 
   const downloadUri = `${API_URL}/documents/download/${document.id}`;
-  console.log(downloadUri, document.content)
+
+  console.log(downloadUri)
   const docs = [{
     uri: downloadUri,
     fileName: document.content,
@@ -107,7 +115,7 @@ export const FileViewer: React.FC<{ documentId?: number }> = ({ documentId }) =>
               <Editor
                 height="100%"
                 defaultLanguage="plaintext"
-                defaultValue={document.content}
+                value={editorContent}
                 onChange={value => setEditorContent(value || '')}
                 options={{
                   minimap: { enabled: false },

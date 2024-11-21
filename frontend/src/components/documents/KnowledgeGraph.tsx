@@ -95,8 +95,6 @@ const KnowledgeGraph: React.FC<{ data: any }> = ({ data }) => {
         }
       });
 
-      console.log(doc);
-
       // Create edges
       (doc.children || []).forEach((targetId: string) => {
         edges.push({
