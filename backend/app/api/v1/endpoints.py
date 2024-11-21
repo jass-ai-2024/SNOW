@@ -24,12 +24,24 @@ from app.repositories.document import DocumentRepository
 router = APIRouter()
 
 
-async def get_document_service(session: AsyncSession = Depends(get_session)) -> DocumentService:
-    return DocumentService(DocumentRepository(session), DocumentProcessor())
+async def get_document_processor(session: AsyncSession = Depends(get_session)) -> DocumentProcessor:
+    return DocumentProcessor(
+        qdrant_location="http://31.31.201.198:6333"
+    )
 
 
-async def get_search_service(session: AsyncSession = Depends(get_session)) -> SearchService:
-    return SearchService(DocumentProcessor())
+async def get_document_service(
+        session: AsyncSession = Depends(get_session),
+        document_processor: DocumentProcessor = Depends(get_document_processor)
+) -> DocumentService:
+    return DocumentService(DocumentRepository(session), document_processor)
+
+
+async def get_search_service(
+        session: AsyncSession = Depends(get_session),
+        document_processor: DocumentProcessor = Depends(get_document_processor)
+) -> SearchService:
+    return SearchService(document_processor)
 
 
 @router.post("/documents/get_place/", response_model=PlaceResponse)

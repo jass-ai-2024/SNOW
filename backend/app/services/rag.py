@@ -1,5 +1,6 @@
 import logging
 import traceback
+import uuid
 from datetime import datetime
 import json
 from typing import List, Optional, Dict, Any
@@ -31,6 +32,14 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+import hashlib
+
+def stable_hash(text: str) -> int:
+    # Берем первые 8 байт MD5 хеша
+    hash_bytes = hashlib.md5(text.encode('utf-8')).digest()[:8]
+    return int.from_bytes(hash_bytes, byteorder='big')
+
+
 class CustomDirectoryReader(SimpleDirectoryReader):
     def __init__(self, return_full_document=False, **kwargs):
         super().__init__(**kwargs)
@@ -44,7 +53,7 @@ class DocumentProcessor:
             model_name: str = "claude-3-5-sonnet-20241022",
             persist_dir: str = "./storage",
             embedding_model_name: str = "bge-small-en-v1.5",
-            qdrant_location: str = ":memory:",
+            qdrant_location: str = "http://31.31.201.198:6333",
             collection_name: str = "documents",
             chunk_size: int = 1024,
             chunk_overlap: int = 20,
@@ -69,8 +78,7 @@ class DocumentProcessor:
         self.qdrant = QdrantClient(location=qdrant_location)
         self.collection_name = collection_name
 
-        # Create collection if it doesn't exist
-        if not self.qdrant.collection_exists(self.collection_name):
+        try:
             self.qdrant.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(
@@ -78,6 +86,8 @@ class DocumentProcessor:
                     distance=Distance.COSINE
                 )
             )
+        except Exception as e:
+            pass
 
         # Configure node parser
         self.node_parser = SimpleNodeParser.from_defaults(
@@ -537,7 +547,7 @@ class DocumentProcessor:
                     })
 
                 point = models.PointStruct(
-                    id=hash(f"{doc_id}_node_{node_idx}"),
+                    id=stable_hash(f"{doc_id}_node_{node_idx}"),
                     vector=embedding,
                     payload={
                         'doc_id': doc_id,
@@ -560,10 +570,12 @@ class DocumentProcessor:
                 points.append(point)
 
             # Upload points
-            self.qdrant.upsert(
+            result = self.qdrant.upsert(
                 collection_name=self.collection_name,
                 points=points
             )
+
+            print(result)
 
             # Save updated state
             self.save_state()
@@ -633,7 +645,7 @@ class DocumentProcessor:
 
                     # Create point for Qdrant
                     point = models.PointStruct(
-                        id=hash(f"{doc.doc_id}_node_{node_idx}"),
+                        id=stable_hash(f"{doc.doc_id}_node_{node_idx}"),
                         vector=embedding,
                         payload={
                             'doc_id': doc.doc_id,
@@ -673,7 +685,7 @@ class DocumentProcessor:
     def query(
             self,
             query_text: str,
-            similarity_threshold: float = 0.7,
+            similarity_threshold: float = 0.0,
             include_hierarchy: bool = True,
             limit: int = 10,
             context_window: int = 1  # Количество соседних нодов для контекста
@@ -705,7 +717,7 @@ class DocumentProcessor:
 
                 # Get previous nodes
                 for i in range(max(0, node_idx - context_window), node_idx):
-                    prev_id = hash(f"{doc_id}_node_{i}")
+                    prev_id = stable_hash(f"{doc_id}_node_{i}")
                     prev_nodes = self.qdrant.retrieve(
                         collection_name=self.collection_name,
                         ids=[prev_id]
@@ -716,7 +728,7 @@ class DocumentProcessor:
                 # Get next nodes
                 total_nodes = node_info["total_nodes"]
                 for i in range(node_idx + 1, min(total_nodes, node_idx + context_window + 1)):
-                    next_id = hash(f"{doc_id}_node_{i}")
+                    next_id = stable_hash(f"{doc_id}_node_{i}")
                     next_nodes = self.qdrant.retrieve(
                         collection_name=self.collection_name,
                         ids=[next_id]

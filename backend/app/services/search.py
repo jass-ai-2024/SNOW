@@ -13,13 +13,13 @@ class SearchService:
         # This is a basic implementation
         res = self.processor.query(query)
 
+        print(res["sources"][0])
         return {
             "answer": res["response"],
             "documents": [
                 {
-                    "id": doc["node_info"]["index"],
-                    "parent": doc["node_info"]["hierarchy_info"].get("parent_id", None),
-                    "subcontent": doc["text"][:200]  # First 200 chars as preview
+                    "id": doc["text"],
+                    "subcontent": doc["metadata"]["summary"]
                 }
                 for doc in res["sources"]
             ]
